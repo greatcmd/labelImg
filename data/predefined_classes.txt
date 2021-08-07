@@ -1,5 +1,7 @@
-dog
 person
+helmet
+hat
+dog
 cat
 tv
 car

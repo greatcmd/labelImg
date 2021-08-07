@@ -1373,6 +1373,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 filename = self.m_img_list[self.cur_img_idx]
 
         if filename:
+            self.file_list_widget.setCurrentRow(self.cur_img_idx)
             self.load_file(filename)
 
     def open_file(self, _value=False):
