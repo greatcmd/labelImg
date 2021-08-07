@@ -1293,7 +1293,10 @@ class MainWindow(QMainWindow, WindowMixin):
         if not self.may_continue() or not dir_path:
             return
 
+        self.cur_img_idx = self.settings.get(dir_path,1) - 1 
         self.last_open_dir = dir_path
+        if self.default_save_dir is None:
+            self.default_save_dir = dir_path
         self.dir_name = dir_path
         self.file_path = None
         self.file_list_widget.clear()
@@ -1303,7 +1306,7 @@ class MainWindow(QMainWindow, WindowMixin):
         for imgPath in self.m_img_list:
             item = QListWidgetItem(imgPath)
             self.file_list_widget.addItem(item)
-
+        
     def verify_image(self, _value=False):
         # Proceeding next image without dialog if having any label
         if self.file_path is not None:
@@ -1345,6 +1348,8 @@ class MainWindow(QMainWindow, WindowMixin):
             self.cur_img_idx -= 1
             filename = self.m_img_list[self.cur_img_idx]
             if filename:
+                self.settings.set(self.dir_name,self.cur_img_idx)
+                self.file_list_widget.setCurrentRow(self.cur_img_idx)
                 self.load_file(filename)
 
     def open_next_image(self, _value=False):
@@ -1364,15 +1369,16 @@ class MainWindow(QMainWindow, WindowMixin):
             return
 
         filename = None
-        if self.file_path is None:
+        if self.cur_img_idx is None or self.cur_img_idx > self.img_count or self.cur_img_idx < 0 :
             filename = self.m_img_list[0]
             self.cur_img_idx = 0
-        else:
-            if self.cur_img_idx + 1 < self.img_count:
-                self.cur_img_idx += 1
-                filename = self.m_img_list[self.cur_img_idx]
+        
+        if self.cur_img_idx + 1 < self.img_count:
+            self.cur_img_idx += 1
+            filename = self.m_img_list[self.cur_img_idx]
 
         if filename:
+            self.settings.set(self.dir_name,self.cur_img_idx)
             self.file_list_widget.setCurrentRow(self.cur_img_idx)
             self.load_file(filename)
 

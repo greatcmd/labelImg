@@ -20,6 +20,10 @@ class Settings(object):
         if key in self.data:
             return self.data[key]
         return default
+    
+    def set(self, key, value):
+        self.data[key] = value
+        #print(self.data)
 
     def save(self):
         if self.path:
