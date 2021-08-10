@@ -51,7 +51,9 @@ from libs.create_ml_io import JSON_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
-__appname__ = 'labelImg'
+from tools import imgtool
+
+__appname__ = 'labelImg-v21.08.08'
 
 
 class WindowMixin(object):
@@ -336,6 +338,8 @@ class MainWindow(QMainWindow, WindowMixin):
                                   icon='color', tip=get_str('shapeFillColorDetail'),
                                   enabled=False)
 
+        image_to_jpg_act = action(get_str('imageToJpg'),self.image_to_jpg_dialog,None,None,None,False)
+
         labels = self.dock.toggleViewAction()
         labels.setText(get_str('showHide'))
         labels.setShortcut('Ctrl+Shift+L')
@@ -379,13 +383,14 @@ class MainWindow(QMainWindow, WindowMixin):
             edit=self.menu(get_str('menu_edit')),
             view=self.menu(get_str('menu_view')),
             help=self.menu(get_str('menu_help')),
+            tool=self.menu(get_str('menu_tool')),
             recentFiles=QMenu(get_str('menu_openRecent')),
             labelList=label_menu)
 
         # Auto saving : Enable auto saving if pressing next
         self.auto_saving = QAction(get_str('autoSaveMode'), self)
         self.auto_saving.setCheckable(True)
-        self.auto_saving.setChecked(settings.get(SETTING_AUTO_SAVE, False))
+        self.auto_saving.setChecked(settings.get(SETTING_AUTO_SAVE, True))
         # Sync single class mode from PR#106
         self.single_class_mode = QAction(get_str('singleClsMode'), self)
         self.single_class_mode.setShortcut("Ctrl+Shift+S")
@@ -396,7 +401,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.display_label_option = QAction(get_str('displayLabel'), self)
         self.display_label_option.setShortcut("Ctrl+Shift+P")
         self.display_label_option.setCheckable(True)
-        self.display_label_option.setChecked(settings.get(SETTING_PAINT_LABEL, False))
+        self.display_label_option.setChecked(settings.get(SETTING_PAINT_LABEL, True))
         self.display_label_option.triggered.connect(self.toggle_paint_labels_option)
 
         add_actions(self.menus.file,
@@ -410,6 +415,8 @@ class MainWindow(QMainWindow, WindowMixin):
             hide_all, show_all, None,
             zoom_in, zoom_out, zoom_org, None,
             fit_window, fit_width))
+        # add tools menu
+        add_actions(self.menus.tool,(image_to_jpg_act,None))
 
         self.menus.file.aboutToShow.connect(self.update_file_menu)
 
@@ -1593,6 +1600,25 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def toggle_draw_square(self):
         self.canvas.set_drawing_shape_to_square(self.draw_squares_option.isChecked())
+    
+    def image_to_jpg_dialog(self):
+        # 把其它图片都转换成jpg格式
+        target_dir_path = self.dir_name
+        if target_dir_path is None:
+            dir_path = os.getcwd()
+            default_open_dir_path = dir_path if dir_path else '.'
+            if self.last_open_dir and os.path.exists(self.last_open_dir):
+                default_open_dir_path = self.last_open_dir
+            else:
+                default_open_dir_path = os.path.dirname(self.file_path) if self.file_path else '.'
+
+            target_dir_path = ustr(QFileDialog.getExistingDirectory(self,
+                                                    '%s - Open Directory' % __appname__, default_open_dir_path,
+                                                    QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks))
+        if target_dir_path:
+            imgtool.convertImageToJpg(target_dir_path)
+
+
 
 def inverted(color):
     return QColor(*[255 - v for v in color.getRgb()])

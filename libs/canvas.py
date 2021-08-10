@@ -191,6 +191,21 @@ class Canvas(QWidget):
                 self.scrollRequest.emit(delta_y, Qt.Vertical)
                 self.update()
             return
+        
+        # 如果已经有shape被拾取到，此时应该优先判断，拾取到shape上的角点坐标
+        if self.selected_shape:
+            index = self.selected_shape.nearest_vertex(pos, self.epsilon)
+            if index is not None:
+                if self.selected_vertex():
+                    self.h_shape.highlight_clear()
+                self.h_vertex, self.h_shape = index, self.selected_shape
+                self.selected_shape.highlight_vertex(index, self.selected_shape.MOVE_VERTEX)
+                self.setToolTip(
+                    "Click & drag to move shape '%s'" % self.selected_shape.label)
+                self.setStatusTip(self.toolTip())
+                self.override_cursor(CURSOR_POINT)
+                self.update()
+                return
 
         # Just hovering over the canvas, 2 possibilities:
         # - Highlight shapes
