@@ -108,6 +108,9 @@ class MainWindow(QMainWindow, WindowMixin):
         # Whether we need to save or not.
         self.dirty = False
 
+        # 记录当前状态是编辑还是生成rect，方便按W键自动切换
+        self.create_mode = True
+
         self._no_selection_slot = False
         self._beginner = True
         self.screencast = "https://youtu.be/p0nR2YsCY_U"
@@ -693,12 +696,18 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def toggle_draw_mode(self, edit=True):
         self.canvas.set_editing(edit)
-        self.actions.createMode.setEnabled(edit)
-        self.actions.editMode.setEnabled(not edit)
+        #self.actions.createMode.setEnabled(edit)
+        #self.actions.editMode.setEnabled(not edit)
 
     def set_create_mode(self):
         assert self.advanced()
-        self.toggle_draw_mode(False)
+        #self.toggle_draw_mode(False)
+        #return
+        self.create_mode = not self.create_mode
+        if self.create_mode:
+            self.set_edit_mode()
+        else:
+            self.toggle_draw_mode(False)
 
     def set_edit_mode(self):
         assert self.advanced()
