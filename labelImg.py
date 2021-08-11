@@ -53,7 +53,7 @@ from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
 from tools import imgtool
 
-__appname__ = 'labelImg-v21.08.08'
+__appname__ = 'labelImg-v21.08.10'
 
 
 class WindowMixin(object):
@@ -342,6 +342,8 @@ class MainWindow(QMainWindow, WindowMixin):
                                   enabled=False)
 
         image_to_jpg_act = action(get_str('imageToJpg'),self.image_to_jpg_dialog,None,None,None,False)
+        reset_image_name_act = action(get_str('resetImageName'),self.reset_image_name_dialog,None,None,None,False)
+        missing_xml_image_act = action(get_str('missXmlImage'),self.missing_xml_image, 'f',None,'find missing xml image',False)
 
         labels = self.dock.toggleViewAction()
         labels.setText(get_str('showHide'))
@@ -419,7 +421,8 @@ class MainWindow(QMainWindow, WindowMixin):
             zoom_in, zoom_out, zoom_org, None,
             fit_window, fit_width))
         # add tools menu
-        add_actions(self.menus.tool,(image_to_jpg_act,None))
+        add_actions(self.menus.tool,(image_to_jpg_act,None,
+        reset_image_name_act,missing_xml_image_act))
 
         self.menus.file.aboutToShow.connect(self.update_file_menu)
 
@@ -1627,6 +1630,39 @@ class MainWindow(QMainWindow, WindowMixin):
         if target_dir_path:
             imgtool.convertImageToJpg(target_dir_path)
 
+
+    def reset_image_name_dialog(self):
+        # 文件名重新格式化，包括对应的xml文件名，两者需要在同一目录下
+        target_dir_path = self.dir_name
+        if target_dir_path is None:
+            dir_path = os.getcwd()
+            default_open_dir_path = dir_path if dir_path else '.'
+            if self.last_open_dir and os.path.exists(self.last_open_dir):
+                default_open_dir_path = self.last_open_dir
+            else:
+                default_open_dir_path = os.path.dirname(self.file_path) if self.file_path else '.'
+
+            target_dir_path = ustr(QFileDialog.getExistingDirectory(self,
+                                                    '%s - Open Directory' % __appname__, default_open_dir_path,
+                                                    QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks))
+        if target_dir_path:
+            imgtool.batchResetName(target_dir_path)
+
+    # 搜索没有匹配xml的图片，将其置为当前，快捷键为f
+    def missing_xml_image(self):
+        if self.img_count == 0:
+            return
+        i = self.cur_img_idx
+        while i < self.img_count:
+            img_path =  os.path.abspath(self.m_img_list[i])
+            f_img, f_ext = os.path.splitext(img_path)
+            if not os.path.exists(f_img + '.xml'):
+                self.cur_img_idx = i
+                self.settings.set(self.dir_name,self.cur_img_idx)
+                self.file_list_widget.setCurrentRow(self.cur_img_idx)
+                self.load_file(img_path)
+                break
+            i = i + 1
 
 
 def inverted(color):
