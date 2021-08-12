@@ -69,7 +69,7 @@ class YOLOWriter:
         for box in self.box_list:
             class_index, x_center, y_center, w, h = self.bnd_box_to_yolo_line(box, class_list)
             # print (classIndex, x_center, y_center, w, h)
-            out_file.write("%d %.6f %.6f %.6f %.6f\n" % (class_index, x_center, y_center, w, h))
+            out_file.write("%d %.9f %.9f %.9f %.9f\n" % (class_index, x_center, y_center, w, h))
 
         # print (classList)
         # print (out_class_file)

@@ -16,17 +16,22 @@ def convertImageToJpg(rootdir):
         print('count of files:',len(filenames))
         for filename in tqdm(filenames):
             imgname = ''
-            if ('.jpeg' in filename or '.png' in filename or '.jfif' in filename ):
+            if ('.jpg' in filename or '.jpeg' in filename or '.png' in filename or '.jfif' in filename ):
                 imgname = os.path.join(parent,filename)
             if imgname :
-                print('read:' + imgname)
-                imgf = cv2.imread(imgname)    
-                # new image name
-                nimgname = os.path.join(parent+'\\tst\\',hashlib.md5(filename.encode()).hexdigest() + '.jpg')
-                cv2.imwrite(nimgname,imgf)
-                print("save image: " + nimgname)
-                os.remove(imgname)
-                print("delete image: " + imgname)
+                #print('read:' + imgname)
+                f_name, f_ext = os.path.splitext(imgname)
+                try:
+                    imgf = cv2.imread(imgname)    
+                    # new image name
+                    nimgname = os.path.join(parent,f_name + '.jpg')
+                    cv2.imwrite(nimgname,imgf)
+                    #print("save image: " + nimgname)
+                except:
+                    print('corrupted image: ' + imgname)
+                    continue
+                #os.remove(imgname)
+                #print("delete image: " + imgname)
             #if filename == '20170317.ind':
             #    os.rename(os.path.join(parent, filename), os.path.join(parent, "20170320.ind"))
     #f.close()

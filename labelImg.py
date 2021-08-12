@@ -10,6 +10,7 @@ import sys
 import subprocess
 import shutil
 import webbrowser as wb
+from tqdm import tqdm
 
 from functools import partial
 from collections import defaultdict
@@ -344,6 +345,7 @@ class MainWindow(QMainWindow, WindowMixin):
         image_to_jpg_act = action(get_str('imageToJpg'),self.image_to_jpg_dialog,None,None,None,False)
         reset_image_name_act = action(get_str('resetImageName'),self.reset_image_name_dialog,None,None,None,False)
         missing_xml_image_act = action(get_str('missXmlImage'),self.missing_xml_image, 'f',None,'find missing xml image',False)
+        pascalVoc_to_yolo_act = action(get_str('pascalVocToYolo'), self.pascalVoc_to_yolo,None,None,'export pascalVoc Format to Yolo Format ',False)
 
         labels = self.dock.toggleViewAction()
         labels.setText(get_str('showHide'))
@@ -422,7 +424,9 @@ class MainWindow(QMainWindow, WindowMixin):
             fit_window, fit_width))
         # add tools menu
         add_actions(self.menus.tool,(image_to_jpg_act,None,
-        reset_image_name_act,missing_xml_image_act))
+        reset_image_name_act,missing_xml_image_act,
+        None,pascalVoc_to_yolo_act
+        ))
 
         self.menus.file.aboutToShow.connect(self.update_file_menu)
 
@@ -1629,6 +1633,7 @@ class MainWindow(QMainWindow, WindowMixin):
                                                     QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks))
         if target_dir_path:
             imgtool.convertImageToJpg(target_dir_path)
+            QMessageBox.about(self, __appname__, 'Done.')
 
 
     def reset_image_name_dialog(self):
@@ -1647,22 +1652,97 @@ class MainWindow(QMainWindow, WindowMixin):
                                                     QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks))
         if target_dir_path:
             imgtool.batchResetName(target_dir_path)
+            QMessageBox.about(self, __appname__, 'Done.')
 
     # 搜索没有匹配xml的图片，将其置为当前，快捷键为f
     def missing_xml_image(self):
         if self.img_count == 0:
+            QMessageBox.about(self, __appname__, 'open your imageset.')
             return
+
+        if self.label_file is None:
+            self.label_file = LabelFile()
+            self.label_file.verified = self.canvas.verified
+
         i = self.cur_img_idx
         while i < self.img_count:
             img_path =  os.path.abspath(self.m_img_list[i])
             f_img, f_ext = os.path.splitext(img_path)
-            if not os.path.exists(f_img + '.xml'):
+            xml_file = f_img + '.xml'
+            if not os.path.exists(xml_file):
                 self.cur_img_idx = i
                 self.settings.set(self.dir_name,self.cur_img_idx)
                 self.file_list_widget.setCurrentRow(self.cur_img_idx)
                 self.load_file(img_path)
-                break
+                QMessageBox.about(self, __appname__, 'get one......')
+                return
+            else:
+                t_voc_parse_reader = PascalVocReader(xml_file)
+                shapes = t_voc_parse_reader.get_shapes()
+                if len(shapes) == 0:
+                    self.cur_img_idx = i
+                    self.settings.set(self.dir_name,self.cur_img_idx)
+                    self.file_list_widget.setCurrentRow(self.cur_img_idx)
+                    self.load_file(img_path)
+                    QMessageBox.about(self, __appname__, 'get one......')
+                    return
             i = i + 1
+
+        QMessageBox.about(self, __appname__, 'find not. \n game is over.')
+
+    # 将当前打开目录下的所有图片，转换成Yolo格式
+    def pascalVoc_to_yolo(self):
+        print('convert format pascalVoc to Yolo')
+        if self.img_count == 0:
+            QMessageBox.about(self, __appname__, 'open your imageset.')
+            return
+        
+        if self.label_file is None:
+            self.label_file = LabelFile()
+            self.label_file.verified = self.canvas.verified
+
+        def format_shape(s):
+            return dict(label=s[0],
+                        line_color=None,
+                        fill_color=None,
+                        points=[(p[0], p[1]) for p in s[1]],
+                        # add chris
+                        difficult=0)
+
+        img_0 =  os.path.abspath(self.m_img_list[0])
+        img_path, f_name = os.path.split(img_0)
+        label_path, f_0 = os.path.split(img_path)
+        train_txt = os.path.join(label_path,'train.txt')
+        val_txt = os.path.join(label_path, 'val.txt')
+        train_file = open(train_txt, 'w')
+        val_file = open(val_txt, 'w')
+
+        label_path += '/labels'
+        label_list= []
+        if not os.path.exists(label_path):
+            os.makedirs(label_path)
+        index = 0
+        for item in tqdm(self.m_img_list):
+            f_dir, f_name = os.path.split(item)
+            if index%4 == 0:
+                val_file.write(f_name + '\n')
+            else:
+                train_file.write(f_name + '\n')
+            index += 1
+            
+            ff_name, ff_ext = os.path.splitext(f_name)
+            xml_file = os.path.join(f_dir,ff_name + '.xml')
+            txt_file = os.path.join(label_path,ff_name + '.txt')
+            t_voc_parse_reader = PascalVocReader(xml_file)
+            shapes = t_voc_parse_reader.get_shapes()
+            fmt_shapes = [format_shape(shape) for shape in shapes]
+            for s in fmt_shapes:
+                if s['label'] not in label_list:
+                    label_list.append(s['label'])
+            self.label_file.save_yolo_format(txt_file, fmt_shapes, item, None, label_list, None, None)
+        train_file.close()
+        val_file.close()
+        QMessageBox.about(self, __appname__, 'Done.')
 
 
 def inverted(color):
