@@ -12,6 +12,7 @@ import shutil
 import webbrowser as wb
 from tqdm import tqdm
 
+
 from functools import partial
 from collections import defaultdict
 
@@ -74,6 +75,7 @@ class WindowMixin(object):
             add_actions(toolbar, actions)
         self.addToolBar(Qt.LeftToolBarArea, toolbar)
         return toolbar
+
 
 
 class MainWindow(QMainWindow, WindowMixin):
@@ -212,6 +214,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.dock_features = QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetFloatable
         self.dock.setFeatures(self.dock.features() ^ self.dock_features)
+
+        # add progressbar on the statusbar
+        self.pbar = QProgressBar()
+        self.pbar.setRange(0, 100)
+        self.pbar.setValue(0)
+        self.statusBar().addPermanentWidget(self.pbar)
 
         # Actions
         action = partial(new_action, self)
@@ -1722,14 +1730,18 @@ class MainWindow(QMainWindow, WindowMixin):
         if not os.path.exists(label_path):
             os.makedirs(label_path)
         index = 0
-        for item in tqdm(self.m_img_list):
+
+        self.statusBar().showMessage('Convert pascalVoc Format data to YoloV5 format Data')
+        self.pbar.setRange(0,self.img_count)
+        
+        for item in self.m_img_list:
             f_dir, f_name = os.path.split(item)
             if index%4 == 0:
                 val_file.write(f_name + '\n')
             else:
                 train_file.write(f_name + '\n')
             index += 1
-            
+            self.pbar.setValue(index)
             ff_name, ff_ext = os.path.splitext(f_name)
             xml_file = os.path.join(f_dir,ff_name + '.xml')
             txt_file = os.path.join(label_path,ff_name + '.txt')
@@ -1742,6 +1754,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.label_file.save_yolo_format(txt_file, fmt_shapes, item, None, label_list, None, None)
         train_file.close()
         val_file.close()
+        self.statusBar().showMessage('converted Done')
         QMessageBox.about(self, __appname__, 'Done.')
 
 
